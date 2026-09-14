@@ -361,7 +361,7 @@ async function getSpeedTest(ctx, policy, timeoutMs, packetBytes) {
 // 请求 IPLark API 获取 IP 纯净度与风险数据
 async function getIPLarkInfo(ctx, policy) {
   try {
-    const res = await ctx.http.get('https://iplark.com/api/ip', {
+    const res = await ctx.http.get('https://ippure.com/api/ip', {
       timeout: 5000,
       policy,
       headers: {
