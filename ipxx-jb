@@ -1,4 +1,22 @@
-const codeMap = { HK: '🇭🇰 香港', TW: '🇼🇸 台湾', SG: '🇸🇬 新加坡', JP: '🇯🇵 日本', KR: '🇰🇷 韩国', US: '🇺🇸 美国', DE: '🇩🇪 德国', GB: '🇬🇧 英国', NL: '🇳🇱 荷兰', FR: '🇫🇷 法国', CA: '🇨🇦 加拿大', AU: '🇦🇺 澳大利亚', TR: '🇹🇷 土耳其', MO: '🇲🇴 澳门', RU: '🇷🇺 俄罗斯' };
+function getCountryFlag(countryCode) {
+  if (!countryCode || countryCode.length !== 2) return '';
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+}
+
+const codeMap = { 
+  HK: '🇭🇰 香港', TW: '🇼🇸 台湾', SG: '🇸🇬 新加坡', JP: '🇯🇵 日本', KR: '🇰🇷 韩国', 
+  US: '🇺🇸 美国', DE: '🇩🇪 德国', GB: '🇬🇧 英国', NL: '🇳🇱 荷兰', FR: '🇫🇷 法国', 
+  CA: '🇨🇦 加拿大', AU: '🇦🇺 澳大利亚', TR: '🇹🇷 土耳其', MO: '🇲🇴 澳门', RU: '🇷🇺 俄罗斯',
+  IN: '🇮🇳 印度', VN: '🇻🇳 越南', TH: '🇹🇭 泰国', MY: '🇲🇾 马来西亚', PH: '🇵🇭 菲律宾',
+  ID: '🇮🇩 印度尼西亚', BR: '🇧🇷 巴西', MX: '🇲🇽 墨西哥', AR: '🇦🇷 阿根廷', CL: '🇨🇱 智利',
+  ZA: '🇿🇦 南非', AE: '🇦🇪 阿联酋', IL: '🇮🇱 以色列', SE: '🇸🇪 瑞典', NO: '🇳🇴 挪威',
+  FI: '🇫🇮 芬兰', DK: '🇩🇰 丹麦', PL: '🇵🇱 波兰', CH: '🇨🇭 瑞士', AT: '🇦🇹 奥地利',
+  IT: '🇮🇹 意大利', ES: '🇪🇸 西班牙', PT: '🇵🇹 葡萄牙', IE: '🇮🇪 爱尔兰', BE: '🇧🇪 比利时'
+};
 
 const cityMap = {
   // 中国香港
@@ -396,7 +414,6 @@ async function getIPInfo(ctx) {
   }
 }
 
-// ========= 新增：网络延迟与抖动测试 =========
 async function getLatencyTest(ctx, policy, count = 3, target = 'Cloudflare') {
   const url = target === 'Google'
     ? 'https://www.google.com/generate_204'
@@ -417,7 +434,6 @@ async function getLatencyTest(ctx, policy, count = 3, target = 'Cloudflare') {
         latencies.push(now() - start);
       }
     } catch (e) {
-      // 单次失败忽略
     }
   }
 
@@ -632,12 +648,13 @@ function normalizePlaceNameForCompare(text) {
 
 function getCountryName(ipInfo) {
   const countryCode = String(ipInfo?.country_code || '').toUpperCase();
+  if (codeMap[countryCode]) {
+    return codeMap[countryCode];
+  }
 
-  return (
-    codeMap[countryCode] ||
-    countryCode ||
-    '未知'
-  ).trim();
+  const flag = getCountryFlag(countryCode);
+  const name = ipInfo?.country_name || countryCode || '未知';
+  return `${flag} ${name}`.trim();
 }
 
 function formatLocationName(ipInfo) {
@@ -645,7 +662,7 @@ function formatLocationName(ipInfo) {
 
   const cityName = typeof ipInfo.city_name_zh === 'string'
     ? ipInfo.city_name_zh.trim()
-    : '';
+    : (ipInfo.city_name || '').trim();
 
   if (!cityName) {
     return countryName;
@@ -743,11 +760,10 @@ export default async function(ctx) {
     };
   }
 
-  const showLatency = isEnvOn(env.SHOW_LATENCY_TEST) || env.SHOW_LATENCY_TEST === undefined; // 默认开启
+  const showLatency = isEnvOn(env.SHOW_LATENCY_TEST) || env.SHOW_LATENCY_TEST === undefined;
   const showSpeedTest = isEnvOn(env.SHOW_SPEED_TEST);
   const showIPPure = isEnvOn(env.SHOW_IPPURE);
 
-  // 1. 延迟测试并发任务
   let latencyTask = null;
   if (showLatency) {
     const count = parseInt(env.LATENCY_COUNT) || 3;
@@ -755,7 +771,6 @@ export default async function(ctx) {
     latencyTask = getLatencyTest(ctx, policy, count, target);
   }
 
-  // 2. 带宽测试并发任务
   let speedTask = null;
   if (showSpeedTest) {
     const speedTimeoutMs = Math.floor(
@@ -774,12 +789,10 @@ export default async function(ctx) {
     );
   }
 
-  // 3. 纯净度检测并发任务
   const ipPureTask = showIPPure
     ? getIPPureInfo(ctx, policy)
     : null;
 
-  // 三者异步并行，减少整体延时
   const [speedMbps, ipPureInfo, latencyText] = await Promise.all([
     speedTask,
     ipPureTask,
