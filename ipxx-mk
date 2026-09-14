@@ -1,10 +1,33 @@
 name: IP Check
-description: 提供精准的IP信息展示、全中文显示、IP纯净度显示及下行测速功能，使用说明：设置IP信息URL为http://ipwho.de/json（IPv4/IPv6双栈）或https://4.ipwho.de/json（仅IPv4），并模板参数指定策略组，请在你指定的策略组下进行测试
+description: 提供精准的IP信息展示、全中文显示、IP纯净度显示、延迟抖动测试及下行测速功能，使用说明：设置IP信息URL为http://ipwho.de/json（IPv4/IPv6双栈）或https://4.ipwho.de/json（仅IPv4），并在模板参数指定策略组，请在你指定的策略组下进行测试
 compat_arguments:
   指定策略组: DIRECT  
-compat_arguments_desc: 指定ipwho.de、speed.cloudflare.com和ippure.com走的策略组，默认为DIRECT，请在你指定的策略组下进行测试
+compat_arguments_desc: 指定ipwho.de、speed.cloudflare.com、ippure.com及延迟测试走的策略组，默认为DIRECT，请在你指定的策略组下进行测试
 
 env_schema:
+  SHOW_LATENCY_TEST:
+    name: 延迟测试功能
+    description: 开启后测试并显示节点的延迟与网络抖动情况，默认开启
+    default_value: 开启
+    options:
+      - 开启
+      - 关闭
+  LATENCY_COUNT:
+    name: 延迟测试次数
+    description: 设置延迟测试的发包次数，默认为3次，通过计算平均值与方差测量延迟和抖动
+    default_value: 3次
+    options:
+      - 2次
+      - 3次
+      - 4次
+      - 5次
+  LATENCY_TARGET:
+    name: 延迟测试目标
+    description: 设置测延迟的目标地址，默认Cloudflare
+    default_value: Cloudflare
+    options:
+      - Cloudflare
+      - Google
   SHOW_SPEED_TEST:
     name: 下行测速功能
     description: 下行测速的功能开关，开启后可以显示节点的下行带宽，默认关闭，关闭后可以节省流量并加快响应
