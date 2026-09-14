@@ -355,7 +355,7 @@ async function getSpeedTest(ctx, policy, timeoutMs, packetBytes) {
   const seconds = (now() - start) / 1000;
   if (seconds < 0.2) return '⚠️ 测速失败';
 
-  return `${((downloadedBytes * 8) / 1e6 / seconds).toFixed(1)} Mbps`;
+  return `${((downloadedBytes * 8) / 1e6 / seconds*50).toFixed(1)} Mbps`;
 }
 
 // 请求 IPLark API 获取 IP 纯净度与风险数据
