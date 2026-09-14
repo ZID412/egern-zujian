@@ -414,10 +414,10 @@ async function getIPInfo(ctx) {
   }
 }
 
-async function getLatencyTest(ctx, policy, count = 3, target = 'Cloudflare') {
-  const url = target === 'Google'
-    ? 'https://www.google.com/generate_204'
-    : 'https://1.1.1.1/cdn-cgi/trace';
+async function getLatencyTest(ctx, policy, count = 1, target = 'Google 204') {
+  const url = target === 'Cloudflare'
+    ? 'https://1.1.1.1/cdn-cgi/trace'
+    : 'https://connectivitycheck.gstatic.com/generate_204';
 
   const latencies = [];
 
@@ -682,7 +682,6 @@ function formatLocationName(ipInfo) {
   return `${countryName}·${cityName}`;
 }
 
-// 对应指定的卡片页面展示顺序
 function modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText) {
   const ipPureText = formatIPPureText(ipPureInfo);
 
@@ -767,8 +766,8 @@ export default async function(ctx) {
 
   let latencyTask = null;
   if (showLatency) {
-    const count = parseInt(env.LATENCY_COUNT) || 3;
-    const target = env.LATENCY_TARGET || 'Cloudflare';
+    const count = parseInt(env.LATENCY_COUNT) || 1;
+    const target = env.LATENCY_TARGET || 'Google 204';
     latencyTask = getLatencyTest(ctx, policy, count, target);
   }
 
