@@ -414,42 +414,6 @@ async function getIPInfo(ctx) {
   }
 }
 
-async function getLatencyTest(ctx, policy, count = 1, target = 'Google 204') {
-  const url = target === 'Cloudflare'
-    ? 'https://1.1.1.1/cdn-cgi/trace'
-    : 'https://connectivitycheck.gstatic.com/generate_204';
-
-  const latencies = [];
-
-  for (let i = 0; i < count; i++) {
-    const start = now();
-    try {
-      const res = await ctx.http.get(url, {
-        method: 'HEAD',
-        timeout: 2500,
-        policy,
-        credentials: 'omit'
-      });
-      if (res.status >= 200 && res.status < 400) {
-        latencies.push(now() - start);
-      }
-    } catch (e) {
-    }
-  }
-
-  if (latencies.length === 0) return '⚠️ 测试超时';
-
-  const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
-
-  if (latencies.length > 1) {
-    const variance = latencies.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / latencies.length;
-    const jitter = Math.sqrt(variance);
-    return `${Math.round(avg)} ms (抖动: ±${Math.round(jitter)} ms)`;
-  }
-
-  return `${Math.round(avg)} ms`;
-}
-
 function cancelReader(reader) {
   if (!reader?.cancel) return;
   try {
@@ -682,7 +646,7 @@ function formatLocationName(ipInfo) {
   return `${countryName}·${cityName}`;
 }
 
-function modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText) {
+function modResponseBody(ipInfo, speedMbps, ipPureInfo) {
   const ipPureText = formatIPPureText(ipPureInfo);
 
   const body = {
@@ -697,10 +661,6 @@ function modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText) {
 
   if (ipPureText) {
     body['IP纯净度'] = ipPureText;
-  }
-
-  if (latencyText) {
-    body['网络延迟'] = latencyText;
   }
 
   if (speedMbps) {
@@ -760,16 +720,8 @@ export default async function(ctx) {
     };
   }
 
-  const showLatency = isEnvOn(env.SHOW_LATENCY_TEST) || env.SHOW_LATENCY_TEST === undefined;
   const showSpeedTest = isEnvOn(env.SHOW_SPEED_TEST);
   const showIPPure = isEnvOn(env.SHOW_IPPURE);
-
-  let latencyTask = null;
-  if (showLatency) {
-    const count = parseInt(env.LATENCY_COUNT) || 1;
-    const target = env.LATENCY_TARGET || 'Google 204';
-    latencyTask = getLatencyTest(ctx, policy, count, target);
-  }
 
   let speedTask = null;
   if (showSpeedTest) {
@@ -793,14 +745,13 @@ export default async function(ctx) {
     ? getIPPureInfo(ctx, policy)
     : null;
 
-  const [speedMbps, ipPureInfo, latencyText] = await Promise.all([
+  const [speedMbps, ipPureInfo] = await Promise.all([
     speedTask,
-    ipPureTask,
-    latencyTask
+    ipPureTask
   ]);
 
   return {
     headers: prepareResponseHeaders(ctx, 'application/json; charset=utf-8'),
-    body: modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText)
+    body: modResponseBody(ipInfo, speedMbps, ipPureInfo)
   };
 }
