@@ -682,6 +682,7 @@ function formatLocationName(ipInfo) {
   return `${countryName}·${cityName}`;
 }
 
+// 对应指定的卡片页面展示顺序
 function modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText) {
   const ipPureText = formatIPPureText(ipPureInfo);
 
@@ -690,14 +691,14 @@ function modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText) {
 
     '出口': formatLocationName(ipInfo),
 
-    '互联网服务提供商': ipInfo.asn
+    '互联网提供商': ipInfo.asn
       ? `AS${ipInfo.asn} ${ipInfo.as_desc || ''}`.trim()
-      : '未知',
-
-    '客户端': ipInfo.user_agent
-      ? ipInfo.user_agent.replace(/^egern/i, 'Egern')
-      : 'Egern'
+      : '未知'
   };
+
+  if (ipPureText) {
+    body['IP纯净度'] = ipPureText;
+  }
 
   if (latencyText) {
     body['网络延迟'] = latencyText;
@@ -707,9 +708,9 @@ function modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText) {
     body['下行带宽'] = speedMbps;
   }
 
-  if (ipPureText) {
-    body['IP纯净度'] = ipPureText;
-  }
+  body['客户端'] = ipInfo.user_agent
+    ? ipInfo.user_agent.replace(/^egern/i, 'Egern')
+    : 'Egern';
 
   return body;
 }
