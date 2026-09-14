@@ -1,7 +1,6 @@
 const codeMap = { HK: '🇭🇰 香港', TW: '🇼🇸 台湾', SG: '🇸🇬 新加坡', JP: '🇯🇵 日本', KR: '🇰🇷 韩国', US: '🇺🇸 美国', DE: '🇩🇪 德国', GB: '🇬🇧 英国', NL: '🇳🇱 荷兰', FR: '🇫🇷 法国', CA: '🇨🇦 加拿大', AU: '🇦🇺 澳大利亚', TR: '🇹🇷 土耳其', MO: '🇲🇴 澳门', RU: '🇷🇺 俄罗斯' };
 
 const cityMap = {
-
   // 中国香港
   'aberdeen': '香港仔',
   'causeway bay': '铜锣湾',
@@ -214,7 +213,8 @@ function now() {
 }
 
 function isEnvOn(v) {
-  return String(v || '').trim() === '开启';
+  const str = String(v || '').trim();
+  return str === '开启';
 }
 
 function escapeRegExp(str) {
@@ -328,7 +328,6 @@ function isSuccessfulResponse(ctx) {
 
 function isJsonLikeResponse(ctx) {
   const contentType = ctx.response?.headers?.get?.('Content-Type') || '';
-
   return /(?:application|text)\/json|\+json|text\/plain/i.test(contentType);
 }
 
@@ -345,7 +344,6 @@ function isValidIPInfoObject(data) {
 async function getIPInfo(ctx) {
   if (!isSuccessfulResponse(ctx)) {
     console.log('原始响应状态码非 2xx，跳过改写:', ctx.response.status);
-
     return {
       ipInfo: null,
       fallbackBody: undefined,
@@ -358,7 +356,6 @@ async function getIPInfo(ctx) {
       '原始响应不是 JSON-like 类型，跳过改写:',
       ctx.response.headers?.get?.('Content-Type') || '无 Content-Type'
     );
-
     return {
       ipInfo: null,
       fallbackBody: undefined,
@@ -370,12 +367,10 @@ async function getIPInfo(ctx) {
 
   try {
     text = await ctx.response.text();
-
     const data = JSON.parse(text);
 
     if (!isValidIPInfoObject(data)) {
       console.log('响应不是预期 IP 信息结构，跳过格式化改写');
-
       return {
         ipInfo: null,
         fallbackBody: text,
@@ -393,7 +388,6 @@ async function getIPInfo(ctx) {
     };
   } catch (e) {
     console.log('IP信息解析失败，尝试返回原始响应:', e);
-
     return {
       ipInfo: null,
       fallbackBody: typeof text === 'string' ? text : undefined,
@@ -402,9 +396,46 @@ async function getIPInfo(ctx) {
   }
 }
 
+// ========= 新增：网络延迟与抖动测试 =========
+async function getLatencyTest(ctx, policy, count = 3, target = 'Cloudflare') {
+  const url = target === 'Google'
+    ? 'https://www.google.com/generate_204'
+    : 'https://1.1.1.1/cdn-cgi/trace';
+
+  const latencies = [];
+
+  for (let i = 0; i < count; i++) {
+    const start = now();
+    try {
+      const res = await ctx.http.get(url, {
+        method: 'HEAD',
+        timeout: 2500,
+        policy,
+        credentials: 'omit'
+      });
+      if (res.status >= 200 && res.status < 400) {
+        latencies.push(now() - start);
+      }
+    } catch (e) {
+      // 单次失败忽略
+    }
+  }
+
+  if (latencies.length === 0) return '⚠️ 测试超时';
+
+  const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+
+  if (latencies.length > 1) {
+    const variance = latencies.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / latencies.length;
+    const jitter = Math.sqrt(variance);
+    return `${Math.round(avg)} ms (抖动: ±${Math.round(jitter)} ms)`;
+  }
+
+  return `${Math.round(avg)} ms`;
+}
+
 function cancelReader(reader) {
   if (!reader?.cancel) return;
-
   try {
     const result = reader.cancel();
     if (result?.catch) result.catch(() => {});
@@ -453,7 +484,6 @@ async function getSpeedTest(ctx, policy, timeoutMs, packetBytes) {
 
     while (true) {
       const readPromise = reader.read();
-
       const { done, value } = await Promise.race([
         readPromise,
         timeoutPromise
@@ -495,17 +525,14 @@ async function getSpeedTest(ctx, policy, timeoutMs, packetBytes) {
 
 function pickIPPureData(d) {
   if (!d || typeof d !== 'object') return null;
-
   if (d.data && typeof d.data === 'object') return d.data;
   if (d.result && typeof d.result === 'object') return d.result;
-
   return d;
 }
 
 function formatNativeType(isResidential) {
   if (isResidential === true) return '原生住宅';
   if (isResidential === false) return '商业机房';
-
   return null;
 }
 
@@ -638,7 +665,7 @@ function formatLocationName(ipInfo) {
   return `${countryName}·${cityName}`;
 }
 
-function modResponseBody(ipInfo, speedMbps, ipPureInfo) {
+function modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText) {
   const ipPureText = formatIPPureText(ipPureInfo);
 
   const body = {
@@ -654,6 +681,10 @@ function modResponseBody(ipInfo, speedMbps, ipPureInfo) {
       ? ipInfo.user_agent.replace(/^egern/i, 'Egern')
       : 'Egern'
   };
+
+  if (latencyText) {
+    body['网络延迟'] = latencyText;
+  }
 
   if (speedMbps) {
     body['下行带宽'] = speedMbps;
@@ -712,11 +743,20 @@ export default async function(ctx) {
     };
   }
 
+  const showLatency = isEnvOn(env.SHOW_LATENCY_TEST) || env.SHOW_LATENCY_TEST === undefined; // 默认开启
   const showSpeedTest = isEnvOn(env.SHOW_SPEED_TEST);
   const showIPPure = isEnvOn(env.SHOW_IPPURE);
 
-  let speedTask = null;
+  // 1. 延迟测试并发任务
+  let latencyTask = null;
+  if (showLatency) {
+    const count = parseInt(env.LATENCY_COUNT) || 3;
+    const target = env.LATENCY_TARGET || 'Cloudflare';
+    latencyTask = getLatencyTest(ctx, policy, count, target);
+  }
 
+  // 2. 带宽测试并发任务
+  let speedTask = null;
   if (showSpeedTest) {
     const speedTimeoutMs = Math.floor(
       parsePositiveFloat(env.SPEED_TEST_TIMEOUT, 5) * 1000
@@ -734,17 +774,20 @@ export default async function(ctx) {
     );
   }
 
+  // 3. 纯净度检测并发任务
   const ipPureTask = showIPPure
     ? getIPPureInfo(ctx, policy)
     : null;
 
-  const [speedMbps, ipPureInfo] = await Promise.all([
+  // 三者异步并行，减少整体延时
+  const [speedMbps, ipPureInfo, latencyText] = await Promise.all([
     speedTask,
-    ipPureTask
+    ipPureTask,
+    latencyTask
   ]);
 
   return {
     headers: prepareResponseHeaders(ctx, 'application/json; charset=utf-8'),
-    body: modResponseBody(ipInfo, speedMbps, ipPureInfo)
+    body: modResponseBody(ipInfo, speedMbps, ipPureInfo, latencyText)
   };
 }
