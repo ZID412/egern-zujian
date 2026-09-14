@@ -7,27 +7,28 @@ compat_arguments_desc: 指定ipwho.de、speed.cloudflare.com、ippure.com及延�
 env_schema:
   SHOW_LATENCY_TEST:
     name: 延迟测试功能
-    description: 开启后测试并显示节点的延迟与网络抖动情况，默认开启
+    description: 开启后测试并显示节点的延迟情况，默认开启
     default_value: 开启
     options:
       - 开启
       - 关闭
   LATENCY_COUNT:
     name: 延迟测试次数
-    description: 设置延迟测试的发包次数，默认为3次，通过计算平均值与方差测量延迟和抖动
-    default_value: 3次
+    description: 设置延迟测试的发包次数，默认为1次
+    default_value: 1次
     options:
+      - 1次
       - 2次
       - 3次
       - 4次
       - 5次
   LATENCY_TARGET:
     name: 延迟测试目标
-    description: 设置测延迟的目标地址，默认Cloudflare
-    default_value: Cloudflare
+    description: 设置测延迟的目标地址，默认 Google 204
+    default_value: Google 204
     options:
+      - Google 204
       - Cloudflare
-      - Google
   SHOW_SPEED_TEST:
     name: 下行测速功能
     description: 下行测速的功能开关，开启后可以显示节点的下行带宽，默认关闭，关闭后可以节省流量并加快响应
