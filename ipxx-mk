@@ -51,7 +51,7 @@ rules:
     match: speed.cloudflare.com
     policy: "{{{指定策略组}}}"
 - domain_suffix:
-    match: iplark.com
+    match: ippure.com
     policy: "{{{指定策略组}}}" 
 - domain_suffix:
     match: ipwho.de
