@@ -1,8 +1,12 @@
-// 作者自用
-// 添加环境变量，名称：GROUP，值：策略组名称
-// IPPure 6-tier risk labels (优质/良好/普通/低危/中危/高危)
-// IP 脱敏函数：IPv4 后两段按字符数动态替换成 *IPv6 只保留前两段，后面统一变成 ****:****
+// ZID412 - Egern通用脚本小组件 - ip纯净度
+// ZID412 - Egern Universal Script Widget - IP Purity
+// 实时展示当前出口 IP、网络类型（住宅原生/机房网络）、地理位置，并评估 IP 风险值与欺诈等级。
 
+// 环境变量：
+// 名称：GROUP
+// 值：你的策略组名称
+
+// IP 脱敏函数：IPv4 后两段按字符数动态替换成 *IPv6 只保留前两段，后面统一变成 ****:****
 function maskIp(ip) {
   if (!ip || typeof ip !== 'string') return ip;
 
