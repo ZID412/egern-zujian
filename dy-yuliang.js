@@ -1,8 +1,13 @@
 // ZID412 - Egern通用脚本小组件 - 订阅余量
 // ZID412 - Egern Universal Script Widget - Subscription balance
 // 支持可视化展示多个机场订阅的流量百分比、今日用量、剩余流量及套餐到期时间，汇总用量等。
-// Supports visual display of the traffic percentage subscribed by multiple airports, today's usage, remaining traffic, package expiration time, and aggregated usage, etc.
-// 推荐使用大号组件
+
+// 环境变量:
+// url1/name1/protocol1/reset1
+// url2/name2/protocol2/reset2
+// url3/name3/protocol3/reset3
+// url4/name4/protocol4/reset4
+// 最多支持显示4个订阅
 
 const DEFAULT_REFRESH_MINUTES = 60;
 const MAX_ACCOUNTS = 4;
