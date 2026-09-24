@@ -9,8 +9,8 @@
  *   例如用香港 IP 访问 YouTube 成功 → 显示 HK；访问失败 → 显示 🚫。
  * • UI：深色圆角卡片、简约字号层级（服务名小字 / 地区码大字加粗 / ms 等宽小字）。
  * • 排序按类别分组：
- *   行1 AI：        ChatGPT / Claude / Gemini / Perplexity
- *   行2 视频流媒体： YouTube / Netflix / Disney+ / PrimeVideo
+ *   行1 AI：        ChatGPT / Claude / Gemini / Grok
+ *   行2 视频流媒体： YouTube / Netflix / Disney+ / Twitch
  *   行3 音乐·娱乐：  Spotify / Max / Hulu / TikTok
  *   行4 工具·社交：  Google / GitHub / X / OKX
  * ==========================================
@@ -71,10 +71,10 @@ export default async function (ctx) {
       return { status: 'ERR' };
     }
   }
-  async function checkPerplexity() { const res = await ctx.http.get(`https://www.perplexity.ai/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
+  async function checkGrok()      { const res = await ctx.http.get(`https://grok.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkNetflix()   { const res = await ctx.http.get(`https://www.netflix.com/generate_204`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res?.status === 204 || res?.status === 200) ? 'OK' : 'ERR' }; }
   async function checkDisney()    { const res = await ctx.http.get(`https://www.disneyplus.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && res.status !== 403) ? 'OK' : 'ERR' }; }
-  async function checkPrimeVideo(){ const res = await ctx.http.get(`https://www.primevideo.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
+  async function checkTwitch()    { const res = await ctx.http.get(`https://www.twitch.tv/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkMax()       { const res = await ctx.http.get(`https://www.max.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkHulu()      { const res = await ctx.http.get(`https://www.hulu.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkSpotify()   { const res = await ctx.http.get(`https://open.spotify.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: res && res.status === 200 ? 'OK' : 'ERR' }; }
@@ -84,10 +84,10 @@ export default async function (ctx) {
   // =========================================================================
   // 并发：先查节点 IP 地区，再探测 16 通道
   // =========================================================================
-  const [ipInfo, chatgpt, claude, gemini, perplexity, youtube, netflix, disney, prime, spotify, max, hulu, tiktok, google, github, x, okx] = await Promise.all([
+  const [ipInfo, chatgpt, claude, gemini, grok, youtube, netflix, disney, twitch, spotify, max, hulu, tiktok, google, github, x, okx] = await Promise.all([
     httpGet('http://ip-api.com/json/?lang=zh-CN&_t=' + Date.now()),
-    timed(checkChatGPT), timed(checkClaude), timed(checkGemini), timed(checkPerplexity),
-    timed(checkYouTube), timed(checkNetflix), timed(checkDisney), timed(checkPrimeVideo),
+    timed(checkChatGPT), timed(checkClaude), timed(checkGemini), timed(checkGrok),
+    timed(checkYouTube), timed(checkNetflix), timed(checkDisney), timed(checkTwitch),
     timed(checkSpotify), timed(checkMax), timed(checkHulu), timed(checkTikTok),
     timed(checkGoogle), timed(checkGitHub), timed(checkX), timed(checkOKX)
   ]);
@@ -106,12 +106,12 @@ export default async function (ctx) {
     { name: 'ChatGPT',     info: resultInfo(chatgpt)     },
     { name: 'Claude',      info: resultInfo(claude)      },
     { name: 'Gemini',      info: resultInfo(gemini)      },
-    { name: 'Perplexity',  info: resultInfo(perplexity)  },
+    { name: 'Grok',        info: resultInfo(grok)        },
     // 行2 视频流媒体
     { name: 'YouTube',     info: resultInfo(youtube)     },
     { name: 'Netflix',     info: resultInfo(netflix)     },
     { name: 'Disney+',     info: resultInfo(disney)      },
-    { name: 'PrimeVideo',  info: resultInfo(prime)       },
+    { name: 'Twitch',      info: resultInfo(twitch)      },
     // 行3 音乐·娱乐
     { name: 'Spotify',     info: resultInfo(spotify)     },
     { name: 'Max',         info: resultInfo(max)         },
@@ -183,23 +183,23 @@ export default async function (ctx) {
     ], { backgroundColor: C.cardBg, borderRadius: 10, padding: [9, 10], flex: 1, borderWidth: 1, borderColor: C.cardBorder });
   };
 
-  // 标题行：组件名 / 策略徽章 / 更新时间
+  // 标题行（紧凑）：组件名 / 策略徽章 / 更新时间
   const headerRow = mkRow([
-    mkIcon('waveform.path.ecg', C.blue, 13), mkSpacer(7),
-    mkText('网络雷达', 13, C.textMain, 'bold'),
+    mkIcon('waveform.path.ecg', C.blue, 9), mkSpacer(4),
+    mkText('连通性检测', 10, C.textMain, 'bold', { maxLines: 1, minScale: 0.6, flex: 1 }),
     mkSpacer(),
-    mkRow([ mkIcon('shield.fill', C.purple, 8), mkSpacer(4), mkText(currentPolicy, 9, C.textMain, 'medium', { maxLines: 1 }) ], { padding: [3, 8], backgroundColor: C.badgeBg, borderRadius: 6 }),
-    mkSpacer(8),
-    mkRow([ mkIcon('arrow.triangle.2.circlepath', C.textSub, 9), mkSpacer(3), mkText(timeStr, 9, C.textSub, 'medium', { family: 'Menlo' }) ])
+    mkRow([ mkIcon('shield.fill', C.purple, 6), mkSpacer(3), mkText(currentPolicy, 7, C.textMain, 'medium', { maxLines: 1 }) ], { padding: [2, 6], backgroundColor: C.badgeBg, borderRadius: 5 }),
+    mkSpacer(5),
+    mkRow([ mkIcon('arrow.triangle.2.circlepath', C.textSub, 7), mkSpacer(2), mkText(timeStr, 7, C.textSub, 'medium', { family: 'Menlo' }) ])
   ]);
 
   return {
     type: 'widget', backgroundColor: C.bg, padding: 12,
     children: [
-      headerRow, mkSpacer(10),
-      mkRow(allServices.slice(0, 4).map(ServiceBlock), { gap: 8 }), mkSpacer(8),
-      mkRow(allServices.slice(4, 8).map(ServiceBlock), { gap: 8 }), mkSpacer(8),
-      mkRow(allServices.slice(8, 12).map(ServiceBlock), { gap: 8 }), mkSpacer(8),
+      headerRow, mkSpacer(8),
+      mkRow(allServices.slice(0, 4).map(ServiceBlock), { gap: 8 }), mkSpacer(6),
+      mkRow(allServices.slice(4, 8).map(ServiceBlock), { gap: 8 }), mkSpacer(6),
+      mkRow(allServices.slice(8, 12).map(ServiceBlock), { gap: 8 }), mkSpacer(6),
       mkRow(allServices.slice(12, 16).map(ServiceBlock), { gap: 8 })
     ]
   };
