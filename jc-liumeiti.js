@@ -1,16 +1,17 @@
 /**
  * ==========================================
- * 🌐 网络雷达 (NetRadar) 大组件 · 12 通道解锁探测
+ * 🌐 网络雷达 (NetRadar) 大组件 · 16 通道解锁探测
  *
  * ✨ 功能概览
- * • 大号组件：一行 4 个卡片、共 3 行，全量展示 12 个服务解锁状态。
+ * • 大号组件：一行 4 个卡片、共 4 行，全量展示 16 个服务解锁状态。
  * • 仅做链接可用性探测：HTTP GET + 状态码白名单判定 + 超时熔断。
  * • 地区显示：显示当前节点（本机网络出口）IP 的地区码——
  *   例如用香港 IP 访问 YouTube 成功 → 显示 HK；访问失败 → 显示 🚫。
- * • 服务列表：
- *   行1：Google / GitHub / YouTube / ChatGPT
- *   行2：Claude / Gemini / Netflix / Disney+
- *   行3：Prime Video / Spotify / TikTok / OKX
+ * • 排序按类别分组：
+ *   行1 AI：        ChatGPT / Claude / Gemini / Perplexity
+ *   行2 视频流媒体： YouTube / Netflix / Disney+ / Prime Video
+ *   行3 音乐·娱乐：  Spotify / Max / Hulu / TikTok
+ *   行4 工具·社交：  Google / GitHub / X / OKX
  * ==========================================
  */
 export default async function (ctx) {
@@ -53,6 +54,7 @@ export default async function (ctx) {
 
   async function checkGoogle()    { const res = await ctx.http.get(`https://www.google.com/generate_204`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: res?.status === 204 ? 'OK' : 'ERR' }; }
   async function checkGitHub()    { const res = await ctx.http.get(`https://github.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
+  async function checkX()         { const res = await ctx.http.get(`https://x.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkYouTube()   { const res = await ctx.http.get(`https://www.youtube.com/generate_204`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: res?.status === 204 ? 'OK' : 'ERR' }; }
   async function checkChatGPT()   { const res = await ctx.http.get(`https://chatgpt.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 302 || res.status === 401 || res.status === 404)) ? 'OK' : 'ERR' }; }
   async function checkClaude()    { const res = await ctx.http.get(`https://api.anthropic.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 404 || res.status === 401 || res.status === 200)) ? 'OK' : 'ERR' }; }
@@ -68,21 +70,25 @@ export default async function (ctx) {
       return { status: 'ERR' };
     }
   }
+  async function checkPerplexity() { const res = await ctx.http.get(`https://www.perplexity.ai/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkNetflix()   { const res = await ctx.http.get(`https://www.netflix.com/generate_204`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res?.status === 204 || res?.status === 200) ? 'OK' : 'ERR' }; }
   async function checkDisney()    { const res = await ctx.http.get(`https://www.disneyplus.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && res.status !== 403) ? 'OK' : 'ERR' }; }
   async function checkPrimeVideo(){ const res = await ctx.http.get(`https://www.primevideo.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
+  async function checkMax()       { const res = await ctx.http.get(`https://www.max.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
+  async function checkHulu()      { const res = await ctx.http.get(`https://www.hulu.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkSpotify()   { const res = await ctx.http.get(`https://open.spotify.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: res && res.status === 200 ? 'OK' : 'ERR' }; }
   async function checkTikTok()    { const res = await ctx.http.get(`https://www.tiktok.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkOKX()       { const res = await ctx.http.get(`https://www.okx.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
 
   // =========================================================================
-  // 并发：先查节点 IP 地区，再探测 12 通道
+  // 并发：先查节点 IP 地区，再探测 16 通道
   // =========================================================================
-  const [ipInfo, google, github, youtube, chatgpt, claude, gemini, netflix, disney, prime, spotify, tiktok, okx] = await Promise.all([
+  const [ipInfo, chatgpt, claude, gemini, perplexity, youtube, netflix, disney, prime, spotify, max, hulu, tiktok, google, github, x, okx] = await Promise.all([
     httpGet('http://ip-api.com/json/?lang=zh-CN&_t=' + Date.now()),
-    timed(checkGoogle), timed(checkGitHub), timed(checkYouTube), timed(checkChatGPT),
-    timed(checkClaude), timed(checkGemini), timed(checkNetflix), timed(checkDisney),
-    timed(checkPrimeVideo), timed(checkSpotify), timed(checkTikTok), timed(checkOKX)
+    timed(checkChatGPT), timed(checkClaude), timed(checkGemini), timed(checkPerplexity),
+    timed(checkYouTube), timed(checkNetflix), timed(checkDisney), timed(checkPrimeVideo),
+    timed(checkSpotify), timed(checkMax), timed(checkHulu), timed(checkTikTok),
+    timed(checkGoogle), timed(checkGitHub), timed(checkX), timed(checkOKX)
   ]);
 
   // 当前节点 IP 的地区码，如 HK / SG / US；查询失败则为空
@@ -95,18 +101,26 @@ export default async function (ctx) {
   };
 
   const allServices = [
-    { name: 'Google',       info: resultInfo(google)   },
-    { name: 'GitHub',       info: resultInfo(github)   },
-    { name: 'YouTube',      info: resultInfo(youtube)  },
-    { name: 'ChatGPT',      info: resultInfo(chatgpt)  },
-    { name: 'Claude',       info: resultInfo(claude)   },
-    { name: 'Gemini',       info: resultInfo(gemini)   },
-    { name: 'Netflix',      info: resultInfo(netflix)  },
-    { name: 'Disney+',      info: resultInfo(disney)   },
-    { name: 'Prime Video',  info: resultInfo(prime)    },
-    { name: 'Spotify',      info: resultInfo(spotify)  },
-    { name: 'TikTok',       info: resultInfo(tiktok)   },
-    { name: 'OKX',          info: resultInfo(okx)      }
+    // 行1 AI
+    { name: 'ChatGPT',     info: resultInfo(chatgpt)     },
+    { name: 'Claude',      info: resultInfo(claude)      },
+    { name: 'Gemini',      info: resultInfo(gemini)      },
+    { name: 'Perplexity',  info: resultInfo(perplexity)  },
+    // 行2 视频流媒体
+    { name: 'YouTube',     info: resultInfo(youtube)     },
+    { name: 'Netflix',     info: resultInfo(netflix)     },
+    { name: 'Disney+',     info: resultInfo(disney)      },
+    { name: 'Prime Video', info: resultInfo(prime)       },
+    // 行3 音乐·娱乐
+    { name: 'Spotify',     info: resultInfo(spotify)     },
+    { name: 'Max',         info: resultInfo(max)         },
+    { name: 'Hulu',        info: resultInfo(hulu)        },
+    { name: 'TikTok',      info: resultInfo(tiktok)      },
+    // 行4 工具·社交
+    { name: 'Google',      info: resultInfo(google)      },
+    { name: 'GitHub',      info: resultInfo(github)      },
+    { name: 'X',           info: resultInfo(x)           },
+    { name: 'OKX',         info: resultInfo(okx)         }
   ];
 
   // =========================================================================
@@ -177,7 +191,8 @@ export default async function (ctx) {
       headerRow, mkSpacer(10),
       mkRow(allServices.slice(0, 4).map(ServiceBlock), { gap: 8 }), mkSpacer(8),
       mkRow(allServices.slice(4, 8).map(ServiceBlock), { gap: 8 }), mkSpacer(8),
-      mkRow(allServices.slice(8, 12).map(ServiceBlock), { gap: 8 })
+      mkRow(allServices.slice(8, 12).map(ServiceBlock), { gap: 8 }), mkSpacer(8),
+      mkRow(allServices.slice(12, 16).map(ServiceBlock), { gap: 8 })
     ]
   };
 }
