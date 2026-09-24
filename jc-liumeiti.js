@@ -10,7 +10,7 @@
  * • UI：深色圆角卡片、简约字号层级（服务名小字 / 地区码大字加粗 / ms 等宽小字）。
  * • 排序按类别分组：
  *   行1 AI：        ChatGPT / Claude / Gemini / Perplexity
- *   行2 视频流媒体： YouTube / Netflix / Disney+ / Prime Video
+ *   行2 视频流媒体： YouTube / Netflix / Disney+ / PrimeVideo
  *   行3 音乐·娱乐：  Spotify / Max / Hulu / TikTok
  *   行4 工具·社交：  Google / GitHub / X / OKX
  * ==========================================
@@ -111,7 +111,7 @@ export default async function (ctx) {
     { name: 'YouTube',     info: resultInfo(youtube)     },
     { name: 'Netflix',     info: resultInfo(netflix)     },
     { name: 'Disney+',     info: resultInfo(disney)      },
-    { name: 'Prime Video', info: resultInfo(prime)       },
+    { name: 'PrimeVideo',  info: resultInfo(prime)       },
     // 行3 音乐·娱乐
     { name: 'Spotify',     info: resultInfo(spotify)     },
     { name: 'Max',         info: resultInfo(max)         },
