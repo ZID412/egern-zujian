@@ -7,6 +7,7 @@
  * • 仅做链接可用性探测：HTTP GET + 状态码白名单判定 + 超时熔断。
  * • 地区显示：显示当前节点（本机网络出口）IP 的地区码——
  *   例如用香港 IP 访问 YouTube 成功 → 显示 HK；访问失败 → 显示 🚫。
+ * • UI：深色圆角卡片、简约字号层级（服务名小字 / 地区码大字加粗 / ms 等宽小字）。
  * • 排序按类别分组：
  *   行1 AI：        ChatGPT / Claude / Gemini / Perplexity
  *   行2 视频流媒体： YouTube / Netflix / Disney+ / Prime Video
@@ -124,21 +125,24 @@ export default async function (ctx) {
   ];
 
   // =========================================================================
-  // 展示
+  // 展示（深色圆角卡片 · 简约层级）
   // =========================================================================
   const C = {
-    bg:         { light: '#F9F9FB', dark: '#0A0C10' },
-    cardBg:     { light: '#FFFFFF', dark: '#12151D' },
-    cardBorder: { light: '#E8E8ED', dark: '#1F2430' },
+    bg:         { light: '#F6F7F9', dark: '#0B0E14' },
+    cardBg:     { light: '#FFFFFF', dark: '#131722' },
+    cardBorder: { light: '#E8E8ED', dark: '#232936' },
     textMain:   { light: '#111111', dark: '#FFFFFF' },
-    textSub:    { light: '#7C7C80', dark: '#8B949E' },
-    blue:       { light: '#0066FF', dark: '#58A6FF' },
+    textSub:    { light: '#7C7C80', dark: '#9AA4B2' },
+    blue:       { light: '#0066FF', dark: '#5B9DFF' },
     green:      { light: '#248A3D', dark: '#3FB950' },
     purple:     { light: '#8C32E6', dark: '#BC8CFF' },
     red:        { light: '#E3241B', dark: '#F85149' },
     warn:       { light: '#E87D00', dark: '#F5A623' },
-    badgeBg:    { light: '#F0F0F4', dark: '#1C212B' }
+    badgeBg:    { light: '#F0F0F4', dark: '#1C2230' }
   };
+
+  const isDarkMode = ctx.device?.isDarkMode || false;
+  const resolveColor = (c) => isDarkMode ? c.dark : c.light;
 
   const parseProxyMode = (context) => {
     let mode = "Rule";
@@ -160,29 +164,33 @@ export default async function (ctx) {
 
   const responseColor = (ms, available) => !available ? C.red : (ms >= 1500 ? C.warn : C.textSub);
 
+  // 卡片：服务名小字 + 状态点 / 地区码大字加粗 + ms 等宽小字
   const ServiceBlock = (item) => {
     const isOk = item.info.available;
+    const regionText = isOk ? (item.info.region || '--') : '🚫';
+    const regionColor = isOk ? C.textMain : C.red;
     return mkCol([
       mkRow([
-        mkText(item.name, 11, C.textMain, 'bold', { flex: 1, maxLines: 1 }),
+        mkText(item.name, 10, C.textSub, 'medium', { flex: 1, maxLines: 1 }),
         { type: 'stack', width: 5, height: 5, borderRadius: 2.5, backgroundColor: isOk ? C.green : C.red }
-      ]),
-      mkSpacer(8),
+      ], 6),
+      mkSpacer(7),
       mkRow([
-        mkText(item.info.region, 9, isOk ? C.textSub : C.red, 'regular'),
+        mkText(regionText, 18, regionColor, 'bold', { maxLines: 1 }),
         mkSpacer(),
-        mkText(isOk ? `${item.info.ms}ms` : '--', 9, responseColor(item.info.ms, isOk), 'regular', { design: 'monospaced' })
-      ])
-    ], { backgroundColor: C.cardBg, borderRadius: 8, padding: [8, 8], flex: 1, borderWidth: 1, borderColor: C.cardBorder });
+        mkText(isOk ? `${item.info.ms}ms` : '--', 10, isOk ? C.textSub : C.red, 'regular', { design: 'monospaced' })
+      ], 4)
+    ], { backgroundColor: C.cardBg, borderRadius: 10, padding: [9, 10], flex: 1, borderWidth: 1, borderColor: C.cardBorder });
   };
 
+  // 标题行：组件名 / 策略徽章 / 更新时间
   const headerRow = mkRow([
-    mkIcon('waveform.path.ecg', C.blue, 12), mkSpacer(6),
-    mkText('网络雷达', 12, C.textMain, 'bold'),
+    mkIcon('waveform.path.ecg', C.blue, 13), mkSpacer(7),
+    mkText('网络雷达', 13, C.textMain, 'bold'),
     mkSpacer(),
-    mkRow([ mkIcon('shield.fill', C.purple, 9), mkSpacer(4), mkText(currentPolicy, 9, C.textMain, 'bold', { maxLines: 1 }) ], { padding: [3, 8], backgroundColor: C.badgeBg, borderRadius: 6 }),
+    mkRow([ mkIcon('shield.fill', C.purple, 8), mkSpacer(4), mkText(currentPolicy, 9, C.textMain, 'medium', { maxLines: 1 }) ], { padding: [3, 8], backgroundColor: C.badgeBg, borderRadius: 6 }),
     mkSpacer(8),
-    mkRow([ mkIcon('arrow.triangle.2.circlepath', C.textSub, 10), mkSpacer(3), mkText(timeStr, 10, C.textSub, 'bold', { family: 'Menlo' }) ])
+    mkRow([ mkIcon('arrow.triangle.2.circlepath', C.textSub, 9), mkSpacer(3), mkText(timeStr, 9, C.textSub, 'medium', { family: 'Menlo' }) ])
   ]);
 
   return {
