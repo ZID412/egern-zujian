@@ -4,9 +4,9 @@
  *
  * ✨ 功能概览
  * • 大号组件：一行 4 个卡片、共 3 行，全量展示 12 个服务解锁状态。
- * • 仅做链接可用性探测，无任何 IP 属性检测（IP、ISP、地理位置、
- *   纯净度评分、DNS 泄漏等全部移除）。
- * • 探测方法：HTTP GET + 状态码白名单判定 + 超时熔断。
+ * • 仅做链接可用性探测：HTTP GET + 状态码白名单判定 + 超时熔断。
+ * • 地区显示：显示当前节点（本机网络出口）IP 的地区码——
+ *   例如用香港 IP 访问 YouTube 成功 → 显示 HK；访问失败 → 显示 🚫。
  * • 服务列表：
  *   行1：Google / GitHub / YouTube / ChatGPT
  *   行2：Claude / Gemini / Netflix / Disney+
@@ -24,6 +24,19 @@ export default async function (ctx) {
 
   const now = new Date();
   const timeStr = `${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  // =========================================================================
+  // 通用 JSON 请求（仅用于查询节点 IP 地区）
+  // =========================================================================
+  async function httpGet(url) {
+    try {
+      const start = Date.now();
+      const resp = await ctx.http.get(url, { headers: commonHeaders, timeout: TIMEOUT_MS });
+      const text = await resp.text();
+      const json = JSON.parse(text);
+      return { data: json.data || json, ping: Date.now() - start };
+    } catch (e) { return { data: {}, ping: 0 }; }
+  }
 
   // =========================================================================
   // 探测函数：HTTP GET + 状态码白名单判定
@@ -62,42 +75,43 @@ export default async function (ctx) {
   async function checkTikTok()    { const res = await ctx.http.get(`https://www.tiktok.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
   async function checkOKX()       { const res = await ctx.http.get(`https://www.okx.com/`, { timeout: TIMEOUT_MS, headers: commonHeaders, followRedirect: false }).catch(() => null); return { code: (res && (res.status === 200 || res.status === 301 || res.status === 302)) ? 'OK' : 'ERR' }; }
 
-  // 12 通道并发探测
-  const [google, github, youtube, chatgpt, claude, gemini, netflix, disney, prime, spotify, tiktok, okx] = await Promise.all([
+  // =========================================================================
+  // 并发：先查节点 IP 地区，再探测 12 通道
+  // =========================================================================
+  const [ipInfo, google, github, youtube, chatgpt, claude, gemini, netflix, disney, prime, spotify, tiktok, okx] = await Promise.all([
+    httpGet('http://ip-api.com/json/?lang=zh-CN&_t=' + Date.now()),
     timed(checkGoogle), timed(checkGitHub), timed(checkYouTube), timed(checkChatGPT),
     timed(checkClaude), timed(checkGemini), timed(checkNetflix), timed(checkDisney),
     timed(checkPrimeVideo), timed(checkSpotify), timed(checkTikTok), timed(checkOKX)
   ]);
 
-  // =========================================================================
-  // 展示
-  // =========================================================================
-  const REGION = {
-    'Google': 'G', 'GitHub': 'G', 'YouTube': 'HK', 'ChatGPT': 'US', 'Claude': 'US', 'Gemini': 'US',
-    'Netflix': 'SG', 'Disney+': 'SG', 'Prime Video': 'US', 'Spotify': 'US', 'TikTok': 'US', 'OKX': 'G'
-  };
+  // 当前节点 IP 的地区码，如 HK / SG / US；查询失败则为空
+  const cc = String(ipInfo.data?.countryCode || '').toUpperCase();
 
-  const resultInfo = (result, name) => {
+  // 可用 → 显示节点 IP 地区；不可用 → 🚫
+  const resultInfo = (result) => {
     const available = result.code === 'OK' || result.status === 'OK';
-    const finalRegion = REGION[name] || 'XX';
-    return { available, region: available ? finalRegion : '--', ms: result.ms || 0 };
+    return { available, region: available ? (cc || '--') : '🚫', ms: result.ms || 0 };
   };
 
   const allServices = [
-    { name: 'Google',       info: resultInfo(google,   'Google') },
-    { name: 'GitHub',       info: resultInfo(github,   'GitHub') },
-    { name: 'YouTube',      info: resultInfo(youtube,  'YouTube') },
-    { name: 'ChatGPT',      info: resultInfo(chatgpt,  'ChatGPT') },
-    { name: 'Claude',       info: resultInfo(claude,   'Claude') },
-    { name: 'Gemini',       info: resultInfo(gemini,   'Gemini') },
-    { name: 'Netflix',      info: resultInfo(netflix,  'Netflix') },
-    { name: 'Disney+',      info: resultInfo(disney,   'Disney+') },
-    { name: 'Prime Video',  info: resultInfo(prime,    'Prime Video') },
-    { name: 'Spotify',      info: resultInfo(spotify,  'Spotify') },
-    { name: 'TikTok',       info: resultInfo(tiktok,   'TikTok') },
-    { name: 'OKX',          info: resultInfo(okx,      'OKX') }
+    { name: 'Google',       info: resultInfo(google)   },
+    { name: 'GitHub',       info: resultInfo(github)   },
+    { name: 'YouTube',      info: resultInfo(youtube)  },
+    { name: 'ChatGPT',      info: resultInfo(chatgpt)  },
+    { name: 'Claude',       info: resultInfo(claude)   },
+    { name: 'Gemini',       info: resultInfo(gemini)   },
+    { name: 'Netflix',      info: resultInfo(netflix)  },
+    { name: 'Disney+',      info: resultInfo(disney)   },
+    { name: 'Prime Video',  info: resultInfo(prime)    },
+    { name: 'Spotify',      info: resultInfo(spotify)  },
+    { name: 'TikTok',       info: resultInfo(tiktok)   },
+    { name: 'OKX',          info: resultInfo(okx)      }
   ];
 
+  // =========================================================================
+  // 展示
+  // =========================================================================
   const C = {
     bg:         { light: '#F9F9FB', dark: '#0A0C10' },
     cardBg:     { light: '#FFFFFF', dark: '#12151D' },
@@ -141,7 +155,7 @@ export default async function (ctx) {
       ]),
       mkSpacer(8),
       mkRow([
-        mkText(item.info.region, 9, C.textSub, 'regular'),
+        mkText(item.info.region, 9, isOk ? C.textSub : C.red, 'regular'),
         mkSpacer(),
         mkText(isOk ? `${item.info.ms}ms` : '--', 9, responseColor(item.info.ms, isOk), 'regular', { design: 'monospaced' })
       ])
